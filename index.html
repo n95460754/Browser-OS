@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>NovaOS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="boot">
+    <div class="boot-logo">◆ NovaOS</div>
+    <div class="boot-bar"><div class="boot-fill"></div></div>
+    <div class="boot-text">Зареждане на ядрото...</div>
+  </div>
+
+  <div id="desktop">
+    <div id="icons"></div>
+    <div id="windows"></div>
+  </div>
+
+  <div id="start-menu" class="hidden">
+    <div class="start-head">◆ NovaOS <span id="start-user">user</span></div>
+    <input id="start-search" placeholder="Търси приложение..." autocomplete="off">
+    <div id="start-apps"></div>
+    <div class="start-foot">
+      <button id="btn-reboot">⟳ Рестарт</button>
+      <button id="btn-reset">🗑 Нулирай всичко</button>
+    </div>
+  </div>
+
+  <div id="taskbar">
+    <button id="start-btn" title="Старт">◆</button>
+    <div id="task-list"></div>
+    <div id="tray"><span id="clock"></span></div>
+  </div>
+
+  <script src="os.js"></script>
+</body>
+</html>
