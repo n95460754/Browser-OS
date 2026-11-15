@@ -125,11 +125,23 @@
     'radial-gradient(circle at 30% 30%, #ffb347, #ff5e62 45%, #2b1055)',
   ];
   const ACCENTS = ['#6c5ce7', '#0984e3', '#00b894', '#e17055', '#e84393', '#fdcb6e'];
-  const settings = Object.assign({ wallpaper: 0, accent: 0, theme: 'dark', user: 'user' }, store.get('nova-settings', {}));
+  // Skins: original looks inspired by three eras of desktop design
+  const SKINS = {
+    xp: { name: 'Класик', era: 'стил 2001', wall:
+      'radial-gradient(ellipse 140% 55% at 22% 108%, #74c947 0 60%, transparent 61%), radial-gradient(ellipse 120% 45% at 92% 112%, #4f9d2c 0 60%, transparent 61%), radial-gradient(ellipse 30% 12% at 70% 22%, rgba(255,255,255,.75), transparent 70%), radial-gradient(ellipse 25% 9% at 30% 30%, rgba(255,255,255,.6), transparent 70%), linear-gradient(180deg, #2d6fd8, #7ab7f6 60%, #cfe8ff)' },
+    glass: { name: 'Стъкло', era: 'стил 2009', wall:
+      'radial-gradient(ellipse at 70% 38%, rgba(130,210,255,.6), transparent 50%), radial-gradient(ellipse at 18% 82%, rgba(90,255,210,.28), transparent 45%), linear-gradient(160deg, #0a3a6b, #1769ad 50%, #0b2c55)' },
+    flat: { name: 'Плосък', era: 'стил 2015', wall:
+      'linear-gradient(112deg, transparent 38%, rgba(90,180,255,.35) 49%, rgba(255,255,255,.12) 50%, transparent 62%), radial-gradient(ellipse at 50% 55%, #1b62b8, #04132b 72%)' },
+    nova: { name: 'Нова', era: 'NovaOS', wall: WALLPAPERS[0] },
+  };
+  const settings = Object.assign({ skin: 'xp', wallpaper: -1, accent: -1, theme: 'dark', user: 'user' }, store.get('nova-settings', {}));
+  if (!SKINS[settings.skin]) settings.skin = 'xp';
   const applySettings = () => {
     const root = document.documentElement;
-    root.style.setProperty('--wallpaper', WALLPAPERS[settings.wallpaper] || WALLPAPERS[0]);
-    root.style.setProperty('--accent', ACCENTS[settings.accent] || ACCENTS[0]);
+    root.style.setProperty('--wallpaper', settings.wallpaper >= 0 ? WALLPAPERS[settings.wallpaper] : SKINS[settings.skin].wall);
+    root.dataset.skin = settings.skin;
+    if (settings.accent >= 0) root.style.setProperty('--accent', ACCENTS[settings.accent]); else root.style.removeProperty('--accent');
     root.dataset.osTheme = settings.theme;
     $('#start-user').textContent = settings.user;
     store.set('nova-settings', settings);
@@ -259,7 +271,7 @@
 
   /* ================= Apps ================= */
   const apps = {};
-  const register = (id, name, icon, open) => { apps[id] = { id, name, icon, open }; };
+  const register = (id, name, icon, open, cat = 'app') => { apps[id] = { id, name, icon, open, cat }; };
   const openFile = path => {
     const node = fs.get(path);
     if (!node) return;
@@ -607,7 +619,7 @@
   });
 
   /* ---------- Snake ---------- */
-  register('snake', 'Змия', '🐍', () => {
+  register('snake', 'Змия', '🐍', function () {
     const win = createWindow({ title: 'Змия', icon: '🐍', width: 420, height: 520, appId: 'snake' });
     const N = 20, CELL = 18;
     const canvas = h('canvas', { width: N * CELL, height: N * CELL, tabindex: '0' });
@@ -677,6 +689,8 @@
     setTimeout(() => canvas.focus(), 50);
   });
 
+  apps.snake.cat = 'game';
+
   /* ---------- Browser (link launcher) ---------- */
   register('browser', 'Браузър', '🌐', () => {
     const win = createWindow({ title: 'Браузър', icon: '🌐', width: 520, height: 420, appId: 'browser' });
@@ -699,16 +713,21 @@
 
   /* ---------- Settings ---------- */
   register('settings', 'Настройки', '⚙️', () => {
-    const win = createWindow({ title: 'Настройки', icon: '⚙️', width: 460, height: 440, appId: 'settings' });
+    const win = createWindow({ title: 'Настройки', icon: '⚙️', width: 520, height: 520, appId: 'settings' });
     const root = h('div', { class: 'settings' });
     const render = () => {
       root.innerHTML = '';
       root.append(
-        h('div', {}, h('h3', {}, 'Тапет'), h('div', { class: 'swatches' }, WALLPAPERS.map((w, i) =>
+        h('div', {}, h('h3', {}, 'Тема на прозорците'), h('div', { class: 'skins' }, Object.entries(SKINS).map(([id, sk]) =>
+          h('button', { class: 'skin-card' + (settings.skin === id ? ' on' : ''), onclick: () => { settings.skin = id; settings.wallpaper = -1; applySettings(); render(); } },
+            h('span', { class: 'skin-prev', 'data-prev': id, style: `background:${sk.wall}` }, h('i'), h('b')), h('strong', {}, sk.name), h('small', {}, sk.era))))),
+        h('div', {}, h('h3', {}, 'Тапет'), h('div', { class: 'swatches' },
+          h('div', { class: 'swatch' + (settings.wallpaper < 0 ? ' on' : ''), title: 'Тапетът на темата', style: `background:${SKINS[settings.skin].wall}`, onclick: () => { settings.wallpaper = -1; applySettings(); render(); } }),
+          WALLPAPERS.map((w, i) =>
           h('div', { class: 'swatch' + (settings.wallpaper === i ? ' on' : ''), style: `background:${w}`, onclick: () => { settings.wallpaper = i; applySettings(); render(); } })))),
-        h('div', {}, h('h3', {}, 'Цвят'), h('div', { class: 'swatches' }, ACCENTS.map((c, i) =>
+        h('div', {}, h('h3', {}, 'Цвят'), h('div', { class: 'swatches' }, h('div', { class: 'dot' + (settings.accent < 0 ? ' on' : ''), title: 'Цветът на темата', style: 'background:conic-gradient(#316ac5,#3a8ee6,#0078d7,#6c5ce7,#316ac5)', onclick: () => { settings.accent = -1; applySettings(); render(); } }), ACCENTS.map((c, i) =>
           h('div', { class: 'dot' + (settings.accent === i ? ' on' : ''), style: `background:${c}`, onclick: () => { settings.accent = i; applySettings(); render(); } })))),
-        h('div', {}, h('h3', {}, 'Тема'),
+        h('div', {}, h('h3', {}, 'Светло / тъмно (Нова и Плосък)'),
           h('button', { class: 'btn', onclick: () => { settings.theme = settings.theme === 'dark' ? 'light' : 'dark'; applySettings(); render(); } },
             settings.theme === 'dark' ? '🌙 Тъмна (смени)' : '☀️ Светла (смени)')),
         h('div', {}, h('h3', {}, 'Потребителско име'),
@@ -723,19 +742,20 @@
     const win = createWindow({ title: 'За NovaOS', icon: 'ℹ️', width: 360, height: 300, appId: 'about' });
     win.body.append(h('div', { class: 'about' },
       h('div', { class: 'big' }, '◆'),
-      h('b', {}, 'NovaOS 1.0'), h('br'),
+      h('b', {}, 'NovaOS 2.0'), h('br'),
       'Операционна система в браузъра.', h('br'),
       'HTML + CSS + JavaScript, без библиотеки.', h('br'), h('br'),
       h('span', { style: 'color:var(--muted)' }, 'Файловете ти се пазят в localStorage на този браузър.')));
   });
 
   /* ================= Desktop, taskbar, start menu ================= */
-  const DESKTOP_APPS = ['explorer', 'terminal', 'notepad', 'calc', 'paint', 'snake', 'browser', 'settings'];
+  const HIDDEN_ON_DESKTOP = ['viewer', 'about'];
 
   function buildDesktop() {
     const wrap = $('#icons');
-    for (const id of DESKTOP_APPS) {
-      const app = apps[id];
+    const order = a => (a.cat === 'game' ? 1 : 0);
+    const list = Object.values(apps).filter(a => !HIDDEN_ON_DESKTOP.includes(a.id)).sort((a, b) => order(a) - order(b));
+    for (const app of list) {
       const icon = h('div', { class: 'desk-icon' }, h('span', { class: 'ico' }, app.icon), app.name);
       icon.onclick = e => {
         document.querySelectorAll('.desk-icon').forEach(i => i.classList.remove('sel'));
@@ -761,10 +781,14 @@
     const menu = $('#start-menu'), list = $('#start-apps'), search = $('#start-search');
     const render = (q = '') => {
       list.innerHTML = '';
-      Object.values(apps)
-        .filter(a => (a.name + a.id).toLowerCase().includes(q.toLowerCase()))
-        .forEach(a => list.append(h('button', { class: 'start-app', onclick: () => { a.open(); toggle(false); } },
-          h('span', { class: 'ico' }, a.icon), a.name)));
+      const hits = Object.values(apps).filter(a => (a.name + a.id).toLowerCase().includes(q.toLowerCase()));
+      for (const [cat, label] of [['app', 'Приложения'], ['game', 'Игри']]) {
+        const group = hits.filter(a => a.cat === cat);
+        if (!group.length) continue;
+        list.append(h('div', { class: 'start-group' }, label));
+        group.forEach(a => list.append(h('button', { class: 'start-app', onclick: () => { a.open(); toggle(false); } },
+          h('span', { class: 'ico' }, a.icon), h('span', { class: 'lbl' }, a.name))));
+      }
     };
     const toggle = force => {
       const show = force ?? menu.classList.contains('hidden');
@@ -775,13 +799,13 @@
     search.addEventListener('keydown', e => { if (e.key === 'Enter') list.querySelector('.start-app')?.click(); });
     $('#start-btn').onclick = e => { e.stopPropagation(); toggle(); };
     document.addEventListener('pointerdown', e => {
-      if (!menu.contains(e.target) && e.target !== $('#start-btn')) toggle(false);
+      if (!menu.contains(e.target) && !$('#start-btn').contains(e.target)) toggle(false);
     });
     document.addEventListener('keydown', e => { if (e.key === 'Meta' || (e.altKey && e.key === 's')) toggle(); if (e.key === 'Escape') toggle(false); });
     $('#btn-reboot').onclick = () => location.reload();
     $('#btn-reset').onclick = async () => {
       if (!await confirmBox('Това изтрива всички файлове и настройки. Сигурен ли си?')) return;
-      try { ['nova-fs', 'nova-settings', 'nova-snake-best'].forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ }
+      try { Object.keys(localStorage).filter(k => k.startsWith('nova-')).forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ }
       location.reload();
     };
   }
@@ -793,6 +817,9 @@
   };
 
   /* ================= Boot ================= */
+  // Expose the API first so extra app files (games.js) can register before boot.
+  window.NovaOS = { apps, fs, store, h, register, createWindow, dialog, ask, isMobile, HOME, refreshExplorers };
+  const boot = () => {
   applySettings();
   buildDesktop();
   buildStartMenu();
@@ -808,6 +835,6 @@
       openFile(HOME + '/Documents/readme.txt');
     }
   }, 1600);
-
-  window.NovaOS = { apps, fs, createWindow }; // handy for tinkering from DevTools
+  };
+  if (document.readyState === 'complete') setTimeout(boot, 0); else window.addEventListener('load', boot);
 })();

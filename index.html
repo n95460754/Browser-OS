@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>NovaOS</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="skins.css">
+  <link rel="stylesheet" href="games.css">
 </head>
 <body>
   <div id="boot">
@@ -29,11 +31,12 @@
   </div>
 
   <div id="taskbar">
-    <button id="start-btn" title="Старт">◆</button>
+    <button id="start-btn" title="Старт"><span class="orb">◆</span><span class="start-label">старт</span></button>
     <div id="task-list"></div>
-    <div id="tray"><span id="clock"></span></div>
+    <div id="tray"><span id="tray-icons">🔊 📶</span><span id="clock"></span></div>
   </div>
 
   <script src="os.js"></script>
+  <script src="games.js"></script>
 </body>
 </html>

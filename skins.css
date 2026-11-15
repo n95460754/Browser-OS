@@ -1,0 +1,192 @@
+/* ==========================================================
+   NovaOS skins — original looks inspired by three eras of
+   desktop design. Loaded after style.css so these win.
+   ========================================================== */
+
+.start-label { display: none; }
+.start-group { grid-column: 1 / -1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 6px 4px 0; }
+.skins { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+.skin-card { display: flex; flex-direction: column; gap: 3px; padding: 6px; border-radius: 8px; border: 2px solid var(--border); background: var(--win-head); text-align: left; }
+.skin-card.on { border-color: var(--accent); }
+.skin-card small { color: var(--muted); font-size: 11px; }
+.skin-prev { position: relative; display: block; height: 54px; border-radius: 4px; overflow: hidden; }
+.skin-prev i { position: absolute; left: 14%; top: 16%; width: 62%; height: 52%; background: #fff; border-radius: 3px; border-top: 8px solid #3a6fd8; }
+.skin-prev b { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; background: #245edb; }
+.skin-prev[data-prev="xp"] i { border-top-color: #0a5bea; background: #ece9d8; border-radius: 4px 4px 0 0; }
+.skin-prev[data-prev="xp"] b { background: linear-gradient(#3f8cf3, #1941a5); }
+.skin-prev[data-prev="glass"] i { border-top-color: rgba(160,200,240,.85); background: #f4f6f9; }
+.skin-prev[data-prev="glass"] b { background: rgba(10,30,60,.6); }
+.skin-prev[data-prev="flat"] i { border-radius: 0; border-top-color: #fff; background: #f3f3f3; }
+.skin-prev[data-prev="flat"] b { background: #111; }
+.skin-prev[data-prev="nova"] i { border-top-color: #2a2b3b; background: #1e1f2b; border-radius: 4px; }
+.skin-prev[data-prev="nova"] b { background: #14141f; }
+
+/* =================== КЛАСИК (2001 style) =================== */
+:root[data-skin="xp"] {
+  --win-bg: #ece9d8; --win-head: #f6f4ea; --text: #000; --muted: #555; --border: #aca899;
+  --accent: #316ac5; color-scheme: light;
+}
+[data-skin="xp"] body { font-family: Tahoma, Verdana, "Segoe UI", sans-serif; }
+[data-skin="xp"] #desktop { inset: 0 0 40px 0; }
+[data-skin="xp"] .desk-icon { border-radius: 2px; }
+[data-skin="xp"] .desk-icon.sel { background: rgba(49,106,197,.55); }
+[data-skin="xp"] #taskbar {
+  height: 40px; padding: 0; gap: 4px; border: 0; backdrop-filter: none;
+  background: linear-gradient(#3f8cf3 0%, #245edb 9%, #245edb 85%, #1941a5 100%);
+}
+[data-skin="xp"] #start-btn {
+  width: auto; height: 40px; padding: 0 22px 0 10px; border-radius: 0 14px 14px 0;
+  background: linear-gradient(#3c9c3c, #47b547 10%, #3a9d3a 70%, #2e7f2e);
+  box-shadow: inset -2px 0 4px rgba(0,0,0,.35), inset 0 1px 1px rgba(255,255,255,.5);
+  display: flex; align-items: center; gap: 6px; font-style: italic; font-weight: 700; font-size: 18px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,.6);
+}
+[data-skin="xp"] #start-btn .orb { font-style: normal; font-size: 16px; color: #ffe066; }
+[data-skin="xp"] .start-label { display: inline; }
+[data-skin="xp"] .task-btn {
+  height: 30px; border-radius: 3px; color: #fff; border: 1px solid rgba(0,0,0,.25);
+  background: linear-gradient(#3c81f3, #2a63d6); box-shadow: inset 0 1px 0 rgba(255,255,255,.3);
+}
+[data-skin="xp"] .task-btn.active { background: linear-gradient(#1e4fb8, #1a47a8); box-shadow: inset 1px 1px 3px rgba(0,0,0,.5); border-bottom-color: rgba(0,0,0,.25); }
+[data-skin="xp"] #tray {
+  height: 100%; display: flex; align-items: center; gap: 8px; color: #fff; padding: 0 12px;
+  background: linear-gradient(#1290e8, #0e7ad6 90%, #0b5fae); border-left: 1px solid #0a3f8c;
+  box-shadow: inset 1px 0 1px rgba(255,255,255,.35);
+}
+[data-skin="xp"] .window {
+  border: 0; border-radius: 8px 8px 0 0; padding: 0 3px 3px; box-shadow: 2px 4px 14px rgba(0,0,0,.45);
+  background: linear-gradient(#0058ee, #0047d0);
+}
+[data-skin="xp"] .window:not(.focused) { background: linear-gradient(#7a96df, #6c88d4); }
+[data-skin="xp"] .win-head { height: 30px; background: transparent; padding-left: 6px; }
+[data-skin="xp"] .win-title { color: #fff; font-weight: 700; font-size: 13px; text-shadow: 1px 1px 1px #0a1e6e; }
+[data-skin="xp"] .win-body { background: var(--win-bg); }
+[data-skin="xp"] .win-btns { display: flex; gap: 2px; }
+[data-skin="xp"] .win-btns button {
+  width: 22px; height: 22px; padding: 0; border-radius: 3px; border: 1px solid #fff; color: #fff; font-weight: 700; font-size: 11px;
+  background: linear-gradient(135deg, #5a95ff, #2264e4); box-shadow: inset 0 0 2px rgba(255,255,255,.6);
+}
+[data-skin="xp"] .win-btns .close { background: linear-gradient(135deg, #f08b6a, #d6421f); }
+[data-skin="xp"] .win-btns button:hover { filter: brightness(1.2); }
+[data-skin="xp"] .window.maximized { padding: 0; border-radius: 0; }
+[data-skin="xp"] #start-menu {
+  bottom: 44px; left: 0; border-radius: 8px 8px 0 0; border: 2px solid #0a5bea; padding: 0; gap: 0; background: #fff;
+}
+[data-skin="xp"] .start-head { background: linear-gradient(#1868ce, #0d4fae); color: #fff; padding: 12px; font-size: 15px; text-shadow: 1px 1px 2px #000; }
+[data-skin="xp"] .start-head span { color: #dbe8ff; }
+[data-skin="xp"] #start-search { margin: 8px; }
+[data-skin="xp"] #start-apps { padding: 0 6px; }
+[data-skin="xp"] .start-app:hover { background: #316ac5; color: #fff; }
+[data-skin="xp"] .start-foot { background: linear-gradient(#4282d6, #1c5bbb); padding: 8px; }
+[data-skin="xp"] .start-foot button { background: transparent; color: #fff; border-color: rgba(255,255,255,.4); }
+[data-skin="xp"] .toolbar button, [data-skin="xp"] .btn {
+  border-radius: 3px; border: 1px solid #003c74; background: linear-gradient(#fff, #ece9d8 90%, #d6d0c0);
+}
+
+/* =================== СТЪКЛО (2009 style) =================== */
+:root[data-skin="glass"] {
+  --win-bg: #f5f6f8; --win-head: #e9eef4; --text: #111; --muted: #4e5a68; --border: #9fb4cc;
+  --accent: #3a8ee6; color-scheme: light;
+}
+[data-skin="glass"] body { font-family: "Segoe UI", Tahoma, sans-serif; }
+[data-skin="glass"] #desktop { inset: 0 0 42px 0; }
+[data-skin="glass"] .desk-icon.sel, [data-skin="glass"] .desk-icon:hover {
+  background: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,.12)); outline: 1px solid rgba(255,255,255,.55);
+}
+[data-skin="glass"] #taskbar {
+  height: 42px; border-top: 1px solid rgba(255,255,255,.35);
+  background: linear-gradient(rgba(60,100,150,.55), rgba(10,25,50,.75)); backdrop-filter: blur(10px) saturate(1.4);
+}
+[data-skin="glass"] #start-btn {
+  width: 40px; height: 40px; border-radius: 50%; font-size: 18px; margin-right: 4px;
+  background: radial-gradient(circle at 50% 30%, #9fe0ff 0%, #2b7fd4 45%, #0d3f86 100%);
+  box-shadow: 0 0 10px rgba(120,200,255,.7), inset 0 2px 3px rgba(255,255,255,.7);
+  border: 1px solid rgba(0,30,70,.8);
+}
+[data-skin="glass"] .task-btn {
+  width: 52px; justify-content: center; height: 36px; color: #fff;
+  background: linear-gradient(rgba(255,255,255,.22), rgba(255,255,255,.06)); border: 1px solid rgba(255,255,255,.25);
+}
+[data-skin="glass"] .task-btn span { display: none; }
+[data-skin="glass"] .task-btn { font-size: 20px; }
+[data-skin="glass"] .task-btn.active { background: linear-gradient(rgba(170,220,255,.5), rgba(80,150,220,.25)); border-bottom-color: rgba(255,255,255,.25); }
+[data-skin="glass"] #tray { color: #fff; display: flex; gap: 10px; align-items: center; }
+[data-skin="glass"] .window {
+  border: 1px solid rgba(0,20,50,.6); border-radius: 8px; padding: 0 7px 7px;
+  background: linear-gradient(rgba(170,205,240,.62), rgba(120,165,215,.55));
+  backdrop-filter: blur(12px) saturate(1.5); -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.45) inset, 0 10px 30px rgba(0,0,0,.45);
+}
+[data-skin="glass"] .window:not(.focused) { background: linear-gradient(rgba(205,220,235,.55), rgba(180,195,215,.5)); }
+[data-skin="glass"] .window.focused { border-color: rgba(0,20,50,.6); }
+[data-skin="glass"] .win-head { background: transparent; height: 32px; padding-left: 4px; }
+[data-skin="glass"] .win-title { color: #000; text-shadow: 0 0 8px #fff, 0 0 8px #fff; font-size: 13px; }
+[data-skin="glass"] .win-body { background: var(--win-bg); border: 1px solid rgba(0,30,70,.45); }
+[data-skin="glass"] .win-btns { display: flex; border-radius: 0 0 5px 5px; overflow: hidden; border: 1px solid rgba(0,20,50,.5); border-top: 0; align-self: flex-start; }
+[data-skin="glass"] .win-btns button {
+  border-radius: 0; height: 20px; width: 28px; font-size: 11px; color: #fff; text-shadow: 0 0 2px #000;
+  background: linear-gradient(rgba(255,255,255,.55), rgba(255,255,255,.2) 50%, rgba(90,140,200,.35) 51%, rgba(160,200,240,.5));
+}
+[data-skin="glass"] .win-btns .close { width: 44px; background: linear-gradient(#e8a493, #d4593c 50%, #c0300e 51%, #d8654a); }
+[data-skin="glass"] .window.maximized { padding: 0; }
+[data-skin="glass"] #start-menu {
+  bottom: 48px; border: 1px solid rgba(0,20,50,.6); border-radius: 8px;
+  background: linear-gradient(rgba(170,205,240,.75), rgba(90,140,200,.75)); backdrop-filter: blur(14px);
+}
+[data-skin="glass"] #start-apps { background: #fff; border-radius: 4px; padding: 6px; border: 1px solid rgba(0,30,70,.4); }
+[data-skin="glass"] .start-head { color: #fff; text-shadow: 0 1px 3px #000; }
+[data-skin="glass"] .start-head span { color: #e6f2ff; }
+[data-skin="glass"] .start-app:hover { background: linear-gradient(#eaf5fd, #c6e4fa); outline: 1px solid #7db7e8; }
+[data-skin="glass"] .start-foot button { background: linear-gradient(rgba(255,255,255,.5), rgba(255,255,255,.15)); color: #fff; border-color: rgba(0,30,70,.5); text-shadow: 0 1px 2px #000; }
+[data-skin="glass"] .toolbar button, [data-skin="glass"] .btn { background: linear-gradient(#f6f6f6, #dedede 50%, #d0d0d0 51%, #e8e8e8); border-color: #8a8a8a; border-radius: 3px; }
+
+/* =================== ПЛОСЪК (2015 style) =================== */
+:root[data-skin="flat"] {
+  --win-bg: #ffffff; --win-head: #f3f3f3; --text: #111; --muted: #5d5d5d; --border: #d0d0d0;
+  --accent: #0078d7; color-scheme: light;
+}
+:root[data-skin="flat"][data-os-theme="dark"] {
+  --win-bg: #1f1f1f; --win-head: #2b2b2b; --text: #f2f2f2; --muted: #a8a8a8; --border: #3c3c3c; color-scheme: dark;
+}
+[data-skin="flat"] body { font-family: "Segoe UI", system-ui, sans-serif; }
+[data-skin="flat"] #desktop { inset: 0 0 40px 0; }
+[data-skin="flat"] .desk-icon { border-radius: 0; }
+[data-skin="flat"] .desk-icon.sel, [data-skin="flat"] .desk-icon:hover { background: rgba(255,255,255,.2); outline: 1px solid rgba(255,255,255,.35); }
+[data-skin="flat"] #taskbar { height: 40px; padding: 0; gap: 0; border: 0; background: rgba(16,16,16,.92); color: #fff; }
+[data-skin="flat"] #start-btn { width: 48px; height: 40px; border-radius: 0; background: transparent; font-size: 18px; }
+[data-skin="flat"] #start-btn:hover { background: rgba(255,255,255,.12); color: #4cc2ff; }
+[data-skin="flat"] .task-btn { height: 40px; border-radius: 0; background: transparent; color: #fff; border-bottom: 2px solid transparent; }
+[data-skin="flat"] .task-btn:hover { background: rgba(255,255,255,.1); }
+[data-skin="flat"] .task-btn.active { background: rgba(255,255,255,.16); border-bottom-color: var(--accent); }
+[data-skin="flat"] #tray { color: #fff; display: flex; gap: 10px; align-items: center; padding: 0 12px; }
+[data-skin="flat"] .window { border-radius: 0; border: 1px solid #777; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+[data-skin="flat"] .window.focused { border-color: var(--accent); }
+[data-skin="flat"] .win-head { background: var(--win-bg); height: 32px; padding-right: 0; }
+[data-skin="flat"] .window:not(.focused) .win-title { color: var(--muted); }
+[data-skin="flat"] .win-btns { display: flex; align-self: stretch; }
+[data-skin="flat"] .win-btns button { width: 46px; height: 32px; border-radius: 0; }
+[data-skin="flat"] .win-btns .close:hover { background: #e81123; }
+[data-skin="flat"] .win-resize { background: none; }
+[data-skin="flat"] #start-menu {
+  bottom: 40px; left: 0; border-radius: 0; border: 0; width: 380px;
+  background: rgba(28,28,28,.96); color: #fff; backdrop-filter: blur(16px);
+}
+[data-skin="flat"] #start-search { background: #fff; color: #000; border-radius: 0; border: 2px solid var(--accent); }
+[data-skin="flat"] .start-head span, [data-skin="flat"] .start-group { color: #bbb; }
+[data-skin="flat"] #start-apps { grid-template-columns: repeat(3, 1fr); gap: 4px; }
+[data-skin="flat"] .start-app {
+  border-radius: 0; background: var(--accent); color: #fff; aspect-ratio: 1; display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: space-between; padding: 8px; text-align: left;
+}
+[data-skin="flat"] .start-app:hover { background: var(--accent); outline: 2px solid rgba(255,255,255,.6); }
+[data-skin="flat"] .start-app .ico { font-size: 28px; margin: 0; }
+[data-skin="flat"] .start-app .lbl { font-size: 11px; }
+[data-skin="flat"] .start-foot button { border-radius: 0; background: #333; color: #fff; border-color: #444; }
+[data-skin="flat"] .toolbar button, [data-skin="flat"] .btn { border-radius: 0; }
+[data-skin="flat"] .ctx, [data-skin="flat"] .dlg { border-radius: 0; }
+
+/* Phones: let the taskbar breathe */
+@media (max-width: 700px) {
+  [data-skin="xp"] #start-btn { padding-right: 14px; }
+  [data-skin="flat"] #start-menu, [data-skin="xp"] #start-menu { width: 100vw; max-width: 100vw; }
+}

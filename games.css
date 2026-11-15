@@ -1,0 +1,43 @@
+/* ---------- Shared game shell ---------- */
+.game { display: flex; flex-direction: column; height: 100%; background: #0b0d12; color: #e8e8f0; outline: none; }
+.game .stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 6px; }
+.game canvas { width: 100%; height: 100%; object-fit: contain; display: block; touch-action: none; }
+.game canvas.pixel { image-rendering: pixelated; image-rendering: crisp-edges; }
+.game .hud { display: flex; gap: 12px; justify-content: center; font: 600 13px/1 system-ui, sans-serif; padding: 6px; font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.game .pad { display: flex; gap: 6px; justify-content: center; padding: 6px; flex-wrap: wrap; }
+.game .pad button {
+  min-width: 52px; height: 44px; border: 0; border-radius: 10px; background: #262a36; color: #fff; font-size: 18px;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.game .pad button:active, .game .pad button.down { background: #3d4458; }
+
+/* ---------- Solitaire ---------- */
+.sol { display: flex; flex-direction: column; height: 100%; background: radial-gradient(ellipse at 50% 30%, #1f8a4c, #0d5c30 80%); }
+.sol .toolbar { background: rgba(0,0,0,.2); border-color: rgba(0,0,0,.25); }
+.sol .toolbar button { color: #111; }
+.sol .toolbar .info { color: #fff; margin-left: auto; font-size: 13px; font-variant-numeric: tabular-nums; }
+.sol-board { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.card, .slot { position: absolute; border-radius: 6px; box-sizing: border-box; }
+.slot { border: 2px solid rgba(255,255,255,.25); background: rgba(0,0,0,.12); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.35); font-size: 22px; }
+.card { background: #fff; border: 1px solid #888; box-shadow: 0 1px 2px rgba(0,0,0,.35); color: #111; cursor: pointer; overflow: hidden; }
+.card.red { color: #c8102e; }
+.card .cr { position: absolute; left: 4px; top: 2px; font-weight: 700; line-height: 1; font-family: Georgia, "Times New Roman", serif; }
+.card .cc { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: .9; }
+.card.back { background: repeating-linear-gradient(45deg, #1d4fb3 0 5px, #2a63d6 5px 10px); border: 3px solid #fff; }
+.card.sel { outline: 3px solid #ffd60a; outline-offset: -1px; }
+.sol .win-msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; color: #fff; font-size: 30px; font-weight: 800; text-shadow: 0 2px 8px #000; background: rgba(0,0,0,.35); }
+
+/* ---------- Minesweeper ---------- */
+.mines { display: flex; flex-direction: column; align-items: center; height: 100%; background: #c0c0c0; color: #000; padding: 8px; gap: 8px; overflow: auto; }
+.mines .bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #c0c0c0; border: 3px inset #eee; padding: 4px 6px; width: fit-content; min-width: 100%; }
+.mines .lcd { background: #000; color: #f22; font: 700 22px/1 "Courier New", monospace; padding: 2px 4px; min-width: 52px; text-align: right; font-variant-numeric: tabular-nums; }
+.mines .face { width: 36px; height: 36px; font-size: 20px; border: 3px outset #eee; background: #c0c0c0; padding: 0; }
+.mines .grid { display: grid; border: 3px inset #eee; }
+.mines .c { width: var(--c, 24px); height: var(--c, 24px); border: 3px outset #f4f4f4; background: #c0c0c0; padding: 0; font: 700 calc(var(--c, 24px) * .6)/1 Tahoma, sans-serif; display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+.mines .c.o { border: 1px solid #999; background: #bdbdbd; }
+.mines .c.boom { background: #f33; }
+.mines .opts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.mines .opts button { padding: 4px 10px; border: 2px outset #eee; background: #d4d0c8; font-size: 13px; }
+.mines .opts button.on { border-style: inset; background: #b8b4ac; }
+.n1 { color: #0000ff; } .n2 { color: #008000; } .n3 { color: #ff0000; } .n4 { color: #000080; }
+.n5 { color: #800000; } .n6 { color: #008080; } .n7 { color: #000; } .n8 { color: #808080; }
