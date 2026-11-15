@@ -130,7 +130,7 @@
     const root = document.documentElement;
     root.style.setProperty('--wallpaper', WALLPAPERS[settings.wallpaper] || WALLPAPERS[0]);
     root.style.setProperty('--accent', ACCENTS[settings.accent] || ACCENTS[0]);
-    root.dataset.theme = settings.theme;
+    root.dataset.osTheme = settings.theme;
     $('#start-user').textContent = settings.user;
     store.set('nova-settings', settings);
   };
@@ -227,7 +227,23 @@
   }
 
   /* ================= Dialog helpers ================= */
-  const ask = (msg, def = '') => window.prompt(msg, def);
+  // In-page dialogs (browser prompt/alert/confirm are blocked in some embeds)
+  function dialog(msg, { input = false, def = '', ok = 'OK', cancel = true } = {}) {
+    return new Promise(resolve => {
+      const field = input ? h('input', { type: 'text', value: def }) : null;
+      const close = v => { veil.remove(); resolve(v); };
+      const okBtn = h('button', { class: 'btn primary', onclick: () => close(input ? field.value.trim() || null : true) }, ok);
+      const veil = h('div', { class: 'veil' }, h('div', { class: 'dlg' },
+        h('div', { class: 'dlg-msg' }, msg), field,
+        h('div', { class: 'dlg-btns' }, cancel ? h('button', { class: 'btn', onclick: () => close(input ? null : false) }, 'Отказ') : null, okBtn)));
+      veil.addEventListener('keydown', e => { if (e.key === 'Enter') okBtn.click(); if (e.key === 'Escape') close(input ? null : false); });
+      document.body.append(veil);
+      setTimeout(() => (field || okBtn).focus(), 30);
+    });
+  }
+  const ask = (msg, def = '') => dialog(msg, { input: true, def });
+  const confirmBox = msg => dialog(msg, { ok: 'Да' });
+  const alert = msg => dialog(msg, { cancel: false });
   function contextMenu(x, y, items) {
     document.querySelectorAll('.ctx').forEach(m => m.remove());
     const menu = h('div', { class: 'ctx' }, items.map(([label, fn]) =>
@@ -264,9 +280,9 @@
       const lines = ta.value.split('\n').length;
       status.textContent = `${current || 'не е запазен'}  ·  ${lines} реда  ·  ${ta.value.length} символа`;
     };
-    const save = (asNew = false) => {
+    const save = async (asNew = false) => {
       if (!current || asNew) {
-        const name = ask('Запиши като (път):', current || HOME + '/Documents/note.txt');
+        const name = await ask('Запиши като (път):', current || HOME + '/Documents/note.txt');
         if (!name) return;
         current = fs.resolve(HOME, name);
       }
@@ -323,8 +339,8 @@
           e.preventDefault(); e.stopPropagation();
           contextMenu(e.clientX, e.clientY, [
             ['Отвори', () => openFile(full)],
-            ['Преименувай', () => { const nn = ask('Ново име:', name); if (nn) try { fs.rename(full, nn); refreshExplorers(); } catch (er) { alert(er.message); } }],
-            ['Изтрий', () => { if (confirm('Да изтрия ли ' + name + '?')) { fs.remove(full); refreshExplorers(); } }],
+            ['Преименувай', async () => { const nn = await ask('Ново име:', name); if (nn) try { fs.rename(full, nn); refreshExplorers(); } catch (er) { alert(er.message); } }],
+            ['Изтрий', async () => { if (await confirmBox('Да изтрия ли ' + name + '?')) { fs.remove(full); refreshExplorers(); } }],
           ]);
         };
         grid.append(item);
@@ -336,8 +352,8 @@
         ['📄 Нов файл', newFile], ['📁 Нова папка', newDir],
       ]);
     };
-    const newFile = () => { const n = ask('Име на файла:', 'нов.txt'); if (n) try { fs.write(fs.resolve(cwd, n), ''); refreshExplorers(); } catch (e) { alert(e.message); } };
-    const newDir = () => { const n = ask('Име на папката:', 'Нова папка'); if (n) try { fs.mkdir(fs.resolve(cwd, n)); refreshExplorers(); } catch (e) { alert(e.message); } };
+    const newFile = async () => { const n = await ask('Име на файла:', 'нов.txt'); if (n) try { fs.write(fs.resolve(cwd, n), ''); refreshExplorers(); } catch (e) { alert(e.message); } };
+    const newDir = async () => { const n = await ask('Име на папката:', 'Нова папка'); if (n) try { fs.mkdir(fs.resolve(cwd, n)); refreshExplorers(); } catch (e) { alert(e.message); } };
     pathInput.addEventListener('keydown', e => { if (e.key === 'Enter') go(fs.resolve(cwd, pathInput.value)); });
     win.body.append(h('div', { class: 'fill explorer' },
       h('div', { class: 'toolbar' },
@@ -563,8 +579,8 @@
       last = [x, y];
     });
     canvas.addEventListener('pointerup', () => { drawing = false; });
-    const save = () => {
-      const name = ask('Запиши като:', HOME + '/Pictures/рисунка.png');
+    const save = async () => {
+      const name = await ask('Запиши като:', HOME + '/Pictures/рисунка.png');
       if (!name) return;
       try { fs.write(fs.resolve(HOME, name.endsWith('.png') ? name : name + '.png'), canvas.toDataURL('image/png')); refreshExplorers(); }
       catch (e) { alert('Неуспешен запис: ' + e.message); }
@@ -661,25 +677,24 @@
     setTimeout(() => canvas.focus(), 50);
   });
 
-  /* ---------- Browser ---------- */
-  register('browser', 'Браузър', '🌐', (url = 'https://www.wikipedia.org/') => {
-    const win = createWindow({ title: 'Браузър', icon: '🌐', width: 760, height: 520, appId: 'browser' });
-    const addr = h('input', { type: 'text', value: url });
-    const frame = h('iframe', { sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups', referrerpolicy: 'no-referrer' });
-    const go = () => {
-      let u = addr.value.trim();
-      if (!/^https?:\/\//i.test(u)) u = u.includes('.') && !u.includes(' ') ? 'https://' + u : 'https://www.bing.com/search?q=' + encodeURIComponent(u);
-      addr.value = u; frame.src = u; win.setTitle(u.replace(/^https?:\/\//, '').split('/')[0]);
-    };
-    addr.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  /* ---------- Browser (link launcher) ---------- */
+  register('browser', 'Браузър', '🌐', () => {
+    const win = createWindow({ title: 'Браузър', icon: '🌐', width: 520, height: 420, appId: 'browser' });
+    const addr = h('input', { type: 'text', placeholder: 'Адрес или търсене…' });
+    const link = h('a', { target: '_blank', rel: 'noopener', class: 'btn primary' }, 'Отвори ➜');
+    const toUrl = u => /^https?:\/\//i.test(u) ? u : u.includes('.') && !u.includes(' ') ? 'https://' + u : 'https://duckduckgo.com/?q=' + encodeURIComponent(u);
+    const sync = () => { link.href = addr.value.trim() ? toUrl(addr.value.trim()) : 'https://duckduckgo.com/'; };
+    addr.addEventListener('input', sync);
+    addr.addEventListener('keydown', e => { if (e.key === 'Enter') link.click(); });
+    sync();
+    const SITES = [['📚', 'Wikipedia', 'https://bg.wikipedia.org/'], ['🧮', 'WolframAlpha', 'https://www.wolframalpha.com/'],
+      ['💻', 'GitHub', 'https://github.com/'], ['🎮', 'SteamDB', 'https://steamdb.info/'],
+      ['🧠', 'Khan Academy', 'https://www.khanacademy.org/'], ['🐍', 'Scratch', 'https://scratch.mit.edu/']];
     win.body.append(h('div', { class: 'fill browser' },
-      h('div', { class: 'toolbar' },
-        h('button', { onclick: () => { addr.value = 'https://www.wikipedia.org/'; go(); } }, '🏠'),
-        h('button', { onclick: () => { frame.src = frame.src; } }, '⟳'),
-        addr, h('button', { onclick: go }, '➜')),
-      frame,
-      h('div', { class: 'note' }, 'Някои сайтове (Google, YouTube) забраняват да бъдат отваряни в рамка — това е тяхна защита, не грешка.')));
-    go();
+      h('div', { class: 'toolbar' }, addr, link),
+      h('div', { class: 'note' }, 'Сайтовете се отварят в нов раздел — повечето (Google, YouTube) не позволяват да бъдат вграждани в прозорец.'),
+      h('div', { class: 'grid' }, SITES.map(([i, n, u]) =>
+        h('a', { class: 'fitem', href: u, target: '_blank', rel: 'noopener' }, h('span', { class: 'ico' }, i), n)))));
   });
 
   /* ---------- Settings ---------- */
@@ -697,7 +712,7 @@
           h('button', { class: 'btn', onclick: () => { settings.theme = settings.theme === 'dark' ? 'light' : 'dark'; applySettings(); render(); } },
             settings.theme === 'dark' ? '🌙 Тъмна (смени)' : '☀️ Светла (смени)')),
         h('div', {}, h('h3', {}, 'Потребителско име'),
-          h('button', { class: 'btn', onclick: () => { const n = ask('Име:', settings.user); if (n && /^[\w.-]{1,16}$/.test(n)) { settings.user = n; applySettings(); render(); } } }, '👤 ' + settings.user)));
+          h('button', { class: 'btn', onclick: async () => { const n = await ask('Име:', settings.user); if (n && /^[\w.-]{1,16}$/.test(n)) { settings.user = n; applySettings(); render(); } } }, '👤 ' + settings.user)));
     };
     render();
     win.body.append(root);
@@ -764,8 +779,8 @@
     });
     document.addEventListener('keydown', e => { if (e.key === 'Meta' || (e.altKey && e.key === 's')) toggle(); if (e.key === 'Escape') toggle(false); });
     $('#btn-reboot').onclick = () => location.reload();
-    $('#btn-reset').onclick = () => {
-      if (!confirm('Това изтрива всички файлове и настройки. Сигурен ли си?')) return;
+    $('#btn-reset').onclick = async () => {
+      if (!await confirmBox('Това изтрива всички файлове и настройки. Сигурен ли си?')) return;
       try { ['nova-fs', 'nova-settings', 'nova-snake-best'].forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ }
       location.reload();
     };
