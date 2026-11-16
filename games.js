@@ -429,14 +429,35 @@
     reset();
   });
 
-  /* ================= Pinball ================= */
-  game('pinball', 'Пинбол', '🪩', () => {
-    const win = createWindow({ title: 'Пинбол', icon: '🪩', width: 380, height: 700, appId: 'pinball' });
-    const W = 320, H = 560, SUB = 8, G = 0.2, MAXV = 17;
-    const g = shell(win, W, H);
+  /* ================= Volcano Pinball (tilted 3D table + side panel) ================= */
+  game('pinball', 'Пинбол Вулкан', '🌋', () => {
+    const win = createWindow({ title: 'Пинбол Вулкан', icon: '🌋', width: 720, height: 720, appId: 'pinball' });
+    const W = 320, H = 560, SUB = 8, G = 0.2, MAXV = 17, RES = 2;
+    const g = shell(win, W * RES, H * RES);
     const { ctx, held, canvas } = g;
+    ctx.scale(RES, RES);
+
+    // ---- layout: tilted table on the left, cabinet panel on the right ----
+    const stage = canvas.parentElement;
+    stage.classList.add('pb-stage');
+    const el = (cls, txt = '') => h('div', { class: cls }, txt);
+    const ballBox = el('pb-ball', '1'), scoreBox = el('pb-score', '0'), multBox = el('pb-mult', '×1');
+    const lines = [el('pb-line'), el('pb-line'), el('pb-line')];
+    const missionBox = el('pb-mission'), rankBox = el('pb-rank'), bestBox = el('pb-best');
+    const panel = h('div', { class: 'pb-panel' },
+      h('div', { class: 'pb-logo' }, h('span', {}, 'ПИНБОЛ'), h('b', {}, 'ВУЛКАН')),
+      h('div', { class: 'pb-row' }, h('div', { class: 'pb-lbl' }, 'ТОПКА'), ballBox, multBox),
+      scoreBox,
+      h('div', { class: 'pb-msgs' }, ...lines),
+      h('div', { class: 'pb-lbl' }, 'МИСИЯ'), missionBox,
+      h('div', { class: 'pb-lbl' }, 'РАНГ'), rankBox, bestBox);
+    const wrap = h('div', { class: 'pb-wrap' });
+    stage.replaceWith(wrap);
+    wrap.append(stage, panel);
+
+    // ---- table geometry (table units, 320 × 560) ----
     const walls = [];
-    const seg = (x1, y1, x2, y2, kick = 0) => walls.push({ x1, y1, x2, y2, kick });
+    const seg = (x1, y1, x2, y2, kind = '') => walls.push({ x1, y1, x2, y2, kind });
     seg(10, 415, 10, 150);
     for (let i = 0; i < 18; i++) {
       const a1 = Math.PI + Math.PI * i / 18, a2 = Math.PI + Math.PI * (i + 1) / 18;
@@ -444,17 +465,50 @@
     }
     seg(310, 150, 310, 545); seg(285, 545, 310, 545); seg(285, 545, 285, 215);
     seg(10, 415, 85, 480); seg(285, 415, 200, 480);
-    seg(48, 352, 74, 430, 1); seg(48, 352, 40, 400); seg(237, 352, 211, 430, 1); seg(237, 352, 245, 400);
-    const bumpers = [{ x: 100, y: 215, r: 20 }, { x: 200, y: 215, r: 20 }, { x: 150, y: 290, r: 20 }, { x: 70, y: 150, r: 10 }, { x: 230, y: 150, r: 10 }];
-    const lights = [{ x: 115, y: 115 }, { x: 160, y: 110 }, { x: 205, y: 115 }];
+    seg(48, 352, 74, 430, 'sling'); seg(48, 352, 40, 400); seg(237, 352, 211, 430, 'sling'); seg(237, 352, 245, 400);
+    seg(36, 250, 36, 330); seg(250, 250, 250, 320); // inner orbit guides
+    const bumpers = [{ x: 100, y: 222, r: 19 }, { x: 200, y: 222, r: 19 }, { x: 150, y: 282, r: 19 }, { x: 70, y: 150, r: 9 }, { x: 230, y: 150, r: 9 }];
+    const lights = [{ x: 115, y: 115 }, { x: 160, y: 108 }, { x: 205, y: 115 }];
+    const drops = [130, 160, 190].map(x => ({ x, y: 176, up: true }));
+    const pool = { x: 142.5, y: 372, r: 22 };
     const mkFlipper = (x, y, dir) => ({ x, y, dir, len: 50, rest: 0.52, up: -0.48, a: 0.52, prev: null });
     const flippers = [mkFlipper(85, 480, 1), mkFlipper(200, 480, -1)];
     const tip = f => ({ x: f.x + f.dir * f.len * Math.cos(f.a), y: f.y + f.len * Math.sin(f.a) });
-    let ball, score, balls, charge, over, flash = 0, topScore = store.get('nova-pinball-best', 0);
-    const newBall = () => { ball = { x: 297.5, y: 530, vx: 0, vy: 0, r: 7 }; charge = 0; lights.forEach(l => { l.on = false; }); };
-    const reset = () => { score = 0; balls = 3; over = false; newBall(); };
+
+    // ---- game state ----
+    const MISSIONS = [
+      { text: 'Удари бъмперите 8 пъти', key: 'bumper', need: 8, reward: 5000 },
+      { text: 'Събори 3-те мишени', key: 'drop', need: 3, reward: 7500 },
+      { text: 'Запали 3-те светлини горе', key: 'light', need: 3, reward: 6000 },
+      { text: 'Удари прашките 6 пъти', key: 'sling', need: 6, reward: 4000 },
+      { text: 'Мини през лавовия кратер 3 пъти', key: 'pool', need: 3, reward: 8000 },
+    ];
+    const RANKS = ['Новак', 'Изследовател', 'Скален катерач', 'Вулканолог', 'Повелител на лавата', 'Легенда'];
+    let ball, score, ballNo, mult, rank, mission, progress, charge, over, paused, saveUntil, inPool, flash = 0, time = 0;
+    let topScore = store.get('nova-pinball-best', 0);
+    const say = (text) => { lines.shift().remove(); const l = el('pb-line new', text); lines.push(l); panel.querySelector('.pb-msgs').append(l); };
+    const add = pts => { score += pts * mult; };
+    const nextMission = () => { mission = (mission + 1) % MISSIONS.length; progress = 0; };
+    const hit = key => {
+      const m = MISSIONS[mission];
+      if (m.key !== key) return;
+      progress++;
+      if (progress >= m.need) {
+        add(m.reward); flash = 24;
+        rank = Math.min(RANKS.length - 1, rank + 1);
+        say(`✔ Мисията е изпълнена! +${m.reward * mult}`); say(`Нов ранг: ${RANKS[rank]}`);
+        nextMission();
+      }
+    };
+    const newBall = () => { ball = { x: 297.5, y: 530, vx: 0, vy: 0, r: 7 }; charge = 0; saveUntil = 0; inPool = false; };
+    const reset = () => {
+      score = 0; ballNo = 1; mult = 1; rank = 0; mission = 0; progress = 0; over = false; paused = false;
+      lights.forEach(l => { l.on = false; }); drops.forEach(d => { d.up = true; });
+      newBall(); say('Добре дошъл във Вулкана!'); say('Задръж 🚀 / Space и пусни');
+    };
     const inLane = () => ball.x > 286 && ball.y > 480;
 
+    // ---- physics helpers ----
     const closest = (b, x1, y1, x2, y2) => {
       const dx = x2 - x1, dy = y2 - y1;
       const t = Math.max(0, Math.min(1, ((b.x - x1) * dx + (b.y - y1) * dy) / (dx * dx + dy * dy)));
@@ -462,116 +516,185 @@
     };
     const bounce = (b, px, py, R, e, ux = 0, uy = 0) => {
       let nx = b.x - px, ny = b.y - py; const d = Math.hypot(nx, ny);
-      if (d >= R || d === 0) return false;
+      if (d >= R || d === 0) return null;
       nx /= d; ny /= d; b.x = px + nx * R; b.y = py + ny * R;
       const vn = (b.vx - ux) * nx + (b.vy - uy) * ny;
       if (vn < 0) { b.vx -= (1 + e) * vn * nx; b.vy -= (1 + e) * vn * ny; }
       return { nx, ny };
     };
+
+    // ---- input ----
     const left = () => held.has('ArrowLeft') || held.has('z') || held.has('Shift') || held.has('tl');
     const right = () => held.has('ArrowRight') || held.has('m') || held.has('/') || held.has('tr');
     const launchKey = () => held.has(' ') || held.has('ArrowDown') || held.has('launch');
-
-    // Touch: left/right half of the table = flippers
+    const togglePause = () => { if (over) return; paused = !paused; say(paused ? '⏸ Пауза — P за продължение' : '▶ Продължаваме!'); };
     canvas.addEventListener('pointerdown', e => {
       canvas.setPointerCapture(e.pointerId);
+      if (over) { reset(); return; }
       const r = canvas.getBoundingClientRect();
       const key = (e.clientX - r.left) / r.width < .5 ? 'tl' : 'tr';
-      if (over) { reset(); return; }
-      if (inLane() && key === 'tr') held.add('launch'); else held.add(key);
-      const up = () => { held.delete(key); held.delete('launch'); canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up); };
+      const k2 = inLane() && key === 'tr' ? 'launch' : key;
+      held.add(k2);
+      const up = () => { held.delete(k2); canvas.removeEventListener('pointerup', up); canvas.removeEventListener('pointercancel', up); };
       canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
     });
-    g.hold('◀ Ляв', 'tl'); g.hold('🚀 Изстрел', 'launch'); g.hold('Десен ▶', 'tr');
-    g.root.addEventListener('keydown', e => { if (over && (e.key === ' ' || e.key === 'Enter')) reset(); });
+    g.hold('◀ Ляв', 'tl'); g.hold('🚀', 'launch'); g.tap('⏸', togglePause); g.hold('Десен ▶', 'tr');
+    g.root.addEventListener('keydown', e => {
+      if (e.key === 'p' || e.key === 'P' || e.key === 'F3') { e.preventDefault(); togglePause(); }
+      if (over && (e.key === ' ' || e.key === 'Enter')) reset();
+    });
 
+    // ---- simulation ----
     let wasLaunching = false;
-    loop(win, dt => {
-      if (!over) {
-        // Plunger: hold to charge, release to fire
-        if (inLane() && Math.abs(ball.vy) < 1) {
-          if (launchKey()) charge = Math.min(1, charge + 0.025 * dt);
-          else if (wasLaunching && charge > 0) { ball.vy = -(9 + charge * 9); charge = 0; }
-        }
-        wasLaunching = launchKey();
-        for (let s = 0; s < SUB; s++) {
-          const st = dt / SUB;
-          flippers.forEach((f, i) => {
-            f.prev = tip(f);
-            const target = (i === 0 ? left() : right()) ? f.up : f.rest;
-            const speed = 0.38 * st;
-            f.a += Math.max(-speed, Math.min(speed, target - f.a));
-          });
-          ball.vy += G * st;
-          ball.x += ball.vx * st; ball.y += ball.vy * st;
-          for (const w of walls) {
-            const c = closest(ball, w.x1, w.y1, w.x2, w.y2);
-            const n = bounce(ball, c.px, c.py, ball.r + 2, w.kick ? 0.2 : 0.45);
-            if (n && w.kick) { ball.vx += n.nx * 5; ball.vy += n.ny * 5; score += 10; flash = 4; }
-          }
-          for (const b of bumpers) {
-            const n = bounce(ball, b.x, b.y, b.r + ball.r, 0.6);
-            if (n) { ball.vx += n.nx * 4.5; ball.vy += n.ny * 4.5; score += b.r > 15 ? 100 : 50; b.lit = 8; }
-          }
-          flippers.forEach(f => {
-            const t = tip(f), c = closest(ball, f.x, f.y, t.x, t.y);
-            const ux = (t.x - f.prev.x) / st * c.t, uy = (t.y - f.prev.y) / st * c.t;
-            bounce(ball, c.px, c.py, ball.r + 6, 0.3, ux, uy);
-          });
-          const sp = Math.hypot(ball.vx, ball.vy);
-          if (sp > MAXV) { ball.vx *= MAXV / sp; ball.vy *= MAXV / sp; }
-        }
-        lights.forEach(l => { if (!l.on && Math.hypot(ball.x - l.x, ball.y - l.y) < 12) { l.on = true; score += 250; } });
-        if (lights.every(l => l.on)) { score += 2000; flash = 20; lights.forEach(l => { l.on = false; }); }
-        if (ball.y > H + 20) {
-          balls--;
-          if (balls <= 0) { over = true; topScore = best('nova-pinball-best', score); } else newBall();
-        }
+    const step = dt => {
+      time += dt;
+      if (inLane() && Math.abs(ball.vy) < 1) {
+        if (launchKey()) charge = Math.min(1, charge + 0.025 * dt);
+        else if (wasLaunching && charge > 0) { ball.vy = -(9 + charge * 9); charge = 0; saveUntil = time + 480; say('🔥 Топката е в игра!'); }
       }
-      // ---- draw ----
-      ctx.fillStyle = '#0c0820'; ctx.fillRect(0, 0, W, H);
-      const grad = ctx.createLinearGradient(0, 80, 0, H);
-      grad.addColorStop(0, '#2a1250'); grad.addColorStop(1, '#0f2a4a');
-      ctx.fillStyle = grad;
-      ctx.beginPath(); ctx.moveTo(10, 480); ctx.lineTo(10, 150); ctx.ellipse(160, 150, 150, 70, Math.PI, Math.PI, Math.PI * 2); ctx.lineTo(310, 545); ctx.lineTo(10, 545); ctx.fill();
-      if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash / 60})`; ctx.fillRect(0, 0, W, H); flash -= dt; }
+      wasLaunching = launchKey();
+      for (let s = 0; s < SUB; s++) {
+        const st = dt / SUB;
+        flippers.forEach((f, i) => {
+          f.prev = tip(f);
+          const target = (i === 0 ? left() : right()) ? f.up : f.rest, sp = 0.38 * st;
+          f.a += Math.max(-sp, Math.min(sp, target - f.a));
+        });
+        ball.vy += G * st; ball.x += ball.vx * st; ball.y += ball.vy * st;
+        for (const w of walls) {
+          const c = closest(ball, w.x1, w.y1, w.x2, w.y2);
+          const n = bounce(ball, c.px, c.py, ball.r + 2, w.kind === 'sling' ? 0.2 : 0.45);
+          if (n && w.kind === 'sling') { ball.vx += n.nx * 5; ball.vy += n.ny * 5; add(10); w.lit = 6; hit('sling'); }
+        }
+        for (const b of bumpers) {
+          const n = bounce(ball, b.x, b.y, b.r + ball.r, 0.6);
+          if (n) { ball.vx += n.nx * 4.5; ball.vy += n.ny * 4.5; add(b.r > 15 ? 100 : 50); b.lit = 8; if (b.r > 15) hit('bumper'); }
+        }
+        for (const d of drops) {
+          if (!d.up) continue;
+          const c = closest(ball, d.x - 9, d.y, d.x + 9, d.y);
+          if (bounce(ball, c.px, c.py, ball.r + 3, 0.4)) {
+            d.up = false; add(500); hit('drop');
+            if (drops.every(x => !x.up)) { add(3000); say('💥 Всички мишени! +' + 3000 * mult); setTimeout(() => drops.forEach(x => { x.up = true; }), 1500); }
+          }
+        }
+        flippers.forEach(f => {
+          const t = tip(f), c = closest(ball, f.x, f.y, t.x, t.y);
+          bounce(ball, c.px, c.py, ball.r + 6, 0.3, (t.x - f.prev.x) / st * c.t, (t.y - f.prev.y) / st * c.t);
+        });
+        const sp = Math.hypot(ball.vx, ball.vy);
+        if (sp > MAXV) { ball.vx *= MAXV / sp; ball.vy *= MAXV / sp; }
+      }
+      lights.forEach(l => { if (!l.on && Math.hypot(ball.x - l.x, ball.y - l.y) < 12) { l.on = true; add(250); hit('light'); } });
+      if (lights.every(l => l.on)) {
+        mult = Math.min(5, mult + 1); flash = 20; say(`⭐ Множител ×${mult}!`);
+        lights.forEach(l => { l.on = false; });
+      }
+      const nowIn = Math.hypot(ball.x - pool.x, ball.y - pool.y) < pool.r;
+      if (nowIn && !inPool) { add(750); hit('pool'); pool.glow = 20; }
+      inPool = nowIn;
+      if (ball.y > H + 20) {
+        if (time < saveUntil) { say('🛟 Спасена топка!'); newBall(); return; }
+        if (ballNo >= 3) {
+          over = true; topScore = best('nova-pinball-best', score);
+          say('КРАЙ НА ИГРАТА'); say('Докосни за нова игра');
+        } else { ballNo++; mult = 1; say(`Топка ${ballNo}`); newBall(); }
+      }
+    };
+
+    // ---- drawing (top-down, the CSS 3D tilt does the perspective) ----
+    const shadowLine = (x1, y1, x2, y2, w) => {
+      ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = w;
+      ctx.beginPath(); ctx.moveTo(x1 + 3, y1 + 4); ctx.lineTo(x2 + 3, y2 + 4); ctx.stroke();
+    };
+    const draw = () => {
+      ctx.fillStyle = '#120806'; ctx.fillRect(0, 0, W, H);
+      // playfield: basalt with lava cracks
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(10, 545); ctx.lineTo(10, 150); ctx.ellipse(160, 150, 150, 70, Math.PI, Math.PI, Math.PI * 2); ctx.lineTo(310, 545); ctx.closePath();
+      const fg = ctx.createLinearGradient(0, 80, 0, H);
+      fg.addColorStop(0, '#2b1712'); fg.addColorStop(.6, '#1d1311'); fg.addColorStop(1, '#2e0f08');
+      ctx.fillStyle = fg; ctx.fill(); ctx.clip();
+      ctx.strokeStyle = 'rgba(255,90,20,.18)'; ctx.lineWidth = 2;
+      for (const [x, y, a] of [[40, 200, .6], [250, 260, 2.2], [120, 330, 1.2], [200, 420, 2.8], [70, 470, .3]]) {
+        ctx.beginPath(); ctx.moveTo(x, y);
+        for (let i = 1; i < 6; i++) ctx.lineTo(x + Math.cos(a + i * .7) * i * 14, y + Math.sin(a + i * .5) * i * 12);
+        ctx.stroke();
+      }
+      // lava crater (rollover)
+      const pulse = .5 + .5 * Math.sin(time * .08);
+      const lg = ctx.createRadialGradient(pool.x, pool.y, 2, pool.x, pool.y, pool.r + 10);
+      lg.addColorStop(0, `rgba(255,${200 + 55 * pulse},120,1)`); lg.addColorStop(.45, '#ff6a00'); lg.addColorStop(1, 'rgba(120,20,0,0)');
+      ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(pool.x, pool.y, pool.r + 10, 0, Math.PI * 2); ctx.fill();
+      if (pool.glow > 0) { ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(pool.x, pool.y, pool.r + 4, 0, Math.PI * 2); ctx.stroke(); pool.glow--; }
+      // arrows pointing to the current mission target
+      ctx.fillStyle = `rgba(255,170,40,${.35 + .4 * pulse})`;
+      for (const [x, y] of [[60, 300], [230, 300]]) { ctx.beginPath(); ctx.moveTo(x, y - 10); ctx.lineTo(x + 7, y + 4); ctx.lineTo(x - 7, y + 4); ctx.fill(); }
+      ctx.restore();
+      if (flash > 0) { ctx.fillStyle = `rgba(255,140,40,${flash / 50})`; ctx.fillRect(0, 0, W, H); flash--; }
       ctx.lineCap = 'round';
+      // walls with fake height (shadow + highlight)
+      walls.forEach(w => shadowLine(w.x1, w.y1, w.x2, w.y2, 5));
       walls.forEach(w => {
-        ctx.strokeStyle = w.kick ? '#ff5fa2' : '#7fd3ff'; ctx.lineWidth = w.kick ? 5 : 4;
+        const sl = w.kind === 'sling';
+        ctx.strokeStyle = sl ? (w.lit > 0 ? '#fff3b0' : '#ff4d2e') : '#b5b9c4'; ctx.lineWidth = sl ? 5 : 4;
         ctx.beginPath(); ctx.moveTo(w.x1, w.y1); ctx.lineTo(w.x2, w.y2); ctx.stroke();
+        if (!sl) { ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(w.x1 - 1, w.y1 - 1); ctx.lineTo(w.x2 - 1, w.y2 - 1); ctx.stroke(); }
+        if (w.lit > 0) w.lit--;
       });
-      lights.forEach(l => { ctx.beginPath(); ctx.arc(l.x, l.y, 6, 0, Math.PI * 2); ctx.fillStyle = l.on ? '#ffe066' : '#3b2f5c'; ctx.fill(); });
+      // lights
+      lights.forEach(l => {
+        ctx.beginPath(); ctx.arc(l.x, l.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = l.on ? '#ffd23f' : '#4a2a1c'; ctx.fill();
+        if (l.on) { ctx.fillStyle = 'rgba(255,210,63,.25)'; ctx.beginPath(); ctx.arc(l.x, l.y, 13, 0, Math.PI * 2); ctx.fill(); }
+      });
+      // drop targets (raised blocks)
+      drops.forEach(d => {
+        if (d.up) {
+          ctx.fillStyle = '#5a1a0c'; ctx.fillRect(d.x - 9, d.y - 2, 18, 9);
+          ctx.fillStyle = '#ff7a1a'; ctx.fillRect(d.x - 9, d.y - 6, 18, 6);
+        } else { ctx.fillStyle = '#2a120a'; ctx.fillRect(d.x - 9, d.y - 2, 18, 4); }
+      });
+      // bumpers as small volcano cones (cylinders seen from above)
       bumpers.forEach(b => {
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fillStyle = b.lit > 0 ? '#fff3b0' : '#ff9f1c'; ctx.fill();
-        ctx.lineWidth = 3; ctx.strokeStyle = '#ffe8a3'; ctx.stroke();
-        if (b.lit > 0) b.lit -= dt;
+        ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(b.x + 4, b.y + 6, b.r, b.r * .9, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#3b1f17'; ctx.beginPath(); ctx.arc(b.x, b.y + 3, b.r, 0, Math.PI * 2); ctx.fill();
+        const bg = ctx.createRadialGradient(b.x - b.r * .3, b.y - b.r * .3, 1, b.x, b.y, b.r);
+        bg.addColorStop(0, b.lit > 0 ? '#fff6c8' : '#ffb24a'); bg.addColorStop(1, b.lit > 0 ? '#ff8a00' : '#b8380c');
+        ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#2a0d05'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * .32, 0, Math.PI * 2); ctx.fill();
+        if (b.lit > 0) b.lit--;
       });
+      // flippers
       flippers.forEach(f => {
         const t = tip(f);
-        ctx.strokeStyle = '#f1f3ff'; ctx.lineWidth = 12;
-        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+        shadowLine(f.x, f.y, t.x, t.y, 12);
+        ctx.strokeStyle = '#e9edf5'; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+        ctx.strokeStyle = '#ff5a1f'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(t.x, t.y); ctx.stroke();
       });
       // plunger
-      ctx.fillStyle = '#555'; ctx.fillRect(289, 540 - 0, 18, 4);
-      ctx.fillStyle = '#ff6b6b'; ctx.fillRect(292, 545 - charge * 0, 12, 12 + charge * 0);
-      if (charge > 0) { ctx.fillStyle = '#ffd43b'; ctx.fillRect(288, 548, 20 * charge, 6); }
-      const bg = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 1, ball.x, ball.y, ball.r);
-      bg.addColorStop(0, '#fff'); bg.addColorStop(1, '#8d99ae');
-      ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fillStyle = bg; ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = '800 22px system-ui, sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(String(score).padStart(6, '0'), W / 2, 34);
-      ctx.font = '12px system-ui, sans-serif'; ctx.fillStyle = '#b8b2d8';
-      ctx.fillText(`Топки: ${'●'.repeat(Math.max(0, balls))}   Рекорд: ${topScore}`, W / 2, 54);
-      if (inLane() && !over && Math.abs(ball.vy) < 1) ctx.fillText('Задръж 🚀 / Space и пусни', W / 2, 380);
-      if (over) {
-        ctx.fillStyle = 'rgba(0,0,0,.65)'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = '#fff';
-        ctx.font = '800 30px system-ui'; ctx.fillText('КРАЙ НА ИГРАТА', W / 2, H / 2);
-        ctx.font = '14px system-ui'; ctx.fillText('Докосни за нова игра', W / 2, H / 2 + 28);
+      ctx.fillStyle = '#7a7f8c'; ctx.fillRect(291, 538 + charge * 8, 14, 18);
+      if (charge > 0) { ctx.fillStyle = '#ffd23f'; ctx.fillRect(288, 556 - charge * 40, 3, charge * 40); }
+      // ball with shadow
+      ctx.fillStyle = 'rgba(0,0,0,.5)'; ctx.beginPath(); ctx.ellipse(ball.x + 4, ball.y + 5, ball.r, ball.r * .8, 0, 0, Math.PI * 2); ctx.fill();
+      const bg = ctx.createRadialGradient(ball.x - 2.5, ball.y - 2.5, 1, ball.x, ball.y, ball.r);
+      bg.addColorStop(0, '#fff'); bg.addColorStop(.5, '#c9ced8'); bg.addColorStop(1, '#5d6370');
+      ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+      if (paused || over) {
+        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#ffb24a'; ctx.font = '800 26px system-ui, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(over ? 'КРАЙ НА ИГРАТА' : 'ПАУЗА', W / 2, H / 2); ctx.textAlign = 'left';
       }
-      ctx.textAlign = 'left';
-    });
-    g.hud.textContent = 'Флипери: ← / → (или Z / M) · Изстрел: Space';
+    };
+    const panelUpdate = () => {
+      ballBox.textContent = ballNo; multBox.textContent = '×' + mult;
+      scoreBox.textContent = score.toLocaleString('bg-BG');
+      const m = MISSIONS[mission];
+      missionBox.textContent = `${m.text} (${progress}/${m.need})`;
+      rankBox.textContent = RANKS[rank]; bestBox.textContent = 'Рекорд: ' + Math.max(topScore, score).toLocaleString('bg-BG');
+    };
+    loop(win, dt => { if (!paused && !over) step(dt); draw(); panelUpdate(); });
+    g.hud.textContent = 'Флипери: ← / → (Z / M) · Изстрел: задръж Space · Пауза: P';
     reset();
   });
 
